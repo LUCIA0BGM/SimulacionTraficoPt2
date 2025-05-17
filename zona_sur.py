@@ -12,8 +12,32 @@ COLOR_CALLE = (70, 70, 70)
 COLOR_VEHICULO = (0, 200, 255)
 COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
 
-cola_vehiculos = queue.Queue()
-vehiculos = []
+# Definición de límites de la zona Sur
+LIMITE_NORTE = 0
+LIMITE_SUR = 600
+LIMITE_OESTE = 0
+LIMITE_ESTE = 800
+
+#cola_vehiculos = queue.Queue()
+#vehiculos = []
+
+class GestorVehiculosSur:
+    def __init__(self):
+        self.vehiculos = []
+        self.cola_vehiculos = queue.Queue()
+
+    def agregar(self, v):
+        self.vehiculos.append(v)
+
+    def procesar_cola(self):
+        while not self.cola_vehiculos.empty():
+            v = self.cola_vehiculos.get()
+            self.agregar(v)
+
+    def mover_vehiculos(self, semaforos):
+        for v in self.vehiculos:
+            v.mover(semaforos)
+
 
 class Semaforo:
     def __init__(self, x, y, direccion):
