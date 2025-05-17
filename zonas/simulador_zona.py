@@ -6,6 +6,7 @@ import threading
 import queue
 import random
 from comunicacion.mensajeria import recibir_vehiculos, enviar_vehiculo
+from zonas.reporte_estado import ReportadorZona
 
 ANCHO, ALTO = 800, 600
 COLOR_FONDO = (30, 30, 30)
@@ -92,6 +93,11 @@ class ZonaSimulada:
             Semaforo(300, 300, "vertical"),
             Semaforo(500, 300, "vertical"),
         ]
+        self.reportador = ReportadorZona(
+            nombre_zona=self.nombre,
+            obtener_estado_callback=self.estado_actual
+        )
+
 
     async def recibir_callback(self, data):
         pos = [random.randint(300, 500), 0]
@@ -153,4 +159,10 @@ class ZonaSimulada:
 
     async def lanzar(self):
         print(f"[{self.nombre}] Escuchando en {self.cola_entrada}...")
+        self.reportador.iniciar()
         await recibir_vehiculos(self.cola_entrada, self.recibir_callback)
+
+    def estado_actual(self):
+        total = len(self.vehiculos)
+        congestion = min(1.0, total / 20)  # Ejemplo: 20 vehículos = congestión máxima
+        return total, congestion
