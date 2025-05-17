@@ -1,3 +1,5 @@
+# zonas/simulador_zona.py
+
 import asyncio
 import pygame
 import threading
@@ -47,7 +49,7 @@ class VehiculoSimulado:
         self.dir = dir_
         self.vel = vel
 
-    def mover(self, semaforos, zona_actual, zona_destino):
+    def mover(self, semaforos, zona_actual):
         for s in semaforos:
             if not s.permite_pasar(self):
                 if self._cerca_de(s):
@@ -55,9 +57,9 @@ class VehiculoSimulado:
 
         self._avanzar()
 
-        # Migrar si sale del borde inferior
-        if self.pos[1] > ALTO and self.dir == "SUR":
-            asyncio.create_task(zona_actual.migrar(self, zona_destino))
+        destino = zona_actual.mapa_zonal.obtener_destino_migracion(self.pos, self.dir)
+        if destino:
+            asyncio.create_task(zona_actual.migrar(self, destino))
 
     def _avanzar(self):
         if self.dir == "SUR":
@@ -78,10 +80,10 @@ class VehiculoSimulado:
         )
 
 class ZonaSimulada:
-    def __init__(self, nombre, cola_entrada, zona_destino):
+    def __init__(self, nombre, cola_entrada, mapa_zonal):
         self.nombre = nombre
         self.cola_entrada = cola_entrada
-        self.zona_destino = zona_destino
+        self.mapa_zonal = mapa_zonal
         self.cola_vehiculos = queue.Queue()
         self.vehiculos = []
         self.semaforos = [
@@ -141,7 +143,7 @@ class ZonaSimulada:
                 self.vehiculos.append(v)
 
             for v in self.vehiculos:
-                v.mover(self.semaforos, self, self.zona_destino)
+                v.mover(self.semaforos, self)
                 pygame.draw.rect(ventana, COLOR_VEHICULO, (*v.pos, 20, 10))
 
             pygame.display.flip()
