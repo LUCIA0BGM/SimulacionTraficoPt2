@@ -3,7 +3,8 @@ import pygame
 import threading
 import queue
 import random
-import uuid
+import uuid    
+import asyncio
 from comunicacion.mensajeria import recibir_vehiculos, enviar_vehiculo
 from zonas.reporte_estado import ReportadorZona
 
@@ -48,20 +49,28 @@ class VehiculoSimulado:
         self.pos = list(pos)
         self.dir = dir_
         self.vel = vel
+        self.migrando = False
+
 
     def mover(self, semaforos, zona_actual):
+        if self.migrando:
+            return  # Ya está en proceso de migración
+
         for s in semaforos:
-            if not s.permite_pasar(self) and self._cerca_de(s):
-                return
+            if not s.permite_pasar(self):
+                if self._cerca_de(s):
+                    return
 
         self._avanzar()
 
         destino = zona_actual.mapa_zonal.obtener_destino_migracion(self.pos, self.dir)
         if destino:
-            asyncio.run_coroutine_threadsafe(
-                zona_actual.migraciones.put(self),
-                zona_actual.loop
+            print(f"[DEBUG] {self.id} detectado para migración hacia {destino} desde pos {self.pos}")
+            self.migrando = True  # Marcar como en proceso
+            zona_actual.loop_principal.call_soon_threadsafe(
+                zona_actual.migraciones.put_nowait, self
             )
+
 
     def _avanzar(self):
         if self.dir == "SUR":
@@ -89,7 +98,6 @@ class ZonaSimulada:
         self.cola_vehiculos = queue.Queue()
         self.vehiculos = []
         self.migraciones = asyncio.Queue()
-        self.loop = asyncio.get_event_loop()  # ⬅️ Aquí guardamos el loop principal
 
         self.semaforos = [
             Semaforo(400, 200, "horizontal"),
@@ -171,6 +179,7 @@ class ZonaSimulada:
         pygame.quit()
 
     async def lanzar(self):
+        self.loop_principal = asyncio.get_running_loop()
         print(f"[{self.nombre}] Escuchando en {self.cola_entrada}...")
         self.reportador.iniciar()
 

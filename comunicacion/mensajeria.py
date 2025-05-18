@@ -1,4 +1,3 @@
-
 import aio_pika
 import asyncio
 import json
@@ -9,7 +8,6 @@ async def conectar():
     return await aio_pika.connect_robust(RABBITMQ_URL)
 
 async def enviar_vehiculo(vehiculo_dict, destino):
-    #print(f"[RabbitMQ] Enviando vehículo a {destino}: {data}")
     connection = await conectar()
     async with connection:
         channel = await connection.channel()
@@ -21,7 +19,11 @@ async def enviar_vehiculo(vehiculo_dict, destino):
 async def recibir_vehiculos(queue_name, callback):
     connection = await conectar()
     channel = await connection.channel()
-    queue = await channel.declare_queue(queue_name, durable=True)
+    queue = await channel.declare_queue(
+        queue_name,
+        durable=True,
+        auto_delete=False  # 👈 Añadido aquí
+    )
 
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
