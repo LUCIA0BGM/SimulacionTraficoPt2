@@ -6,7 +6,7 @@ from zonas.mapa_zonal import MapaZonal
 if __name__ == "__main__":
     mapa_sur = MapaZonal(
         nombre_zona="zona_sur",
-        limites={"x_min": 0, "x_max": 800, "y_min": 300, "y_max": 600},
+        limites={"x_min": 0, "x_max": 800, "y_min": 591, "y_max": 1200},
         vecinos={"NORTE": "zona_norte"}  # puedes añadir más si expandes
     )
 

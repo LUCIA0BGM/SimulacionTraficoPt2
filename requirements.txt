@@ -2,3 +2,6 @@ aio-pika
 pika
 pygame
 rabbitmq-admin
+fastapi
+uvicorn
+httpx

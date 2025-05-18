@@ -1,10 +1,9 @@
-# zonas/simulador_zona.py
-
-import asyncio
+import asyncio 
 import pygame
 import threading
 import queue
 import random
+import uuid
 from comunicacion.mensajeria import recibir_vehiculos, enviar_vehiculo
 from zonas.reporte_estado import ReportadorZona
 
@@ -52,15 +51,17 @@ class VehiculoSimulado:
 
     def mover(self, semaforos, zona_actual):
         for s in semaforos:
-            if not s.permite_pasar(self):
-                if self._cerca_de(s):
-                    return
+            if not s.permite_pasar(self) and self._cerca_de(s):
+                return
 
         self._avanzar()
 
         destino = zona_actual.mapa_zonal.obtener_destino_migracion(self.pos, self.dir)
         if destino:
-            asyncio.create_task(zona_actual.migrar(self, destino))
+            asyncio.run_coroutine_threadsafe(
+                zona_actual.migraciones.put(self),
+                zona_actual.loop
+            )
 
     def _avanzar(self):
         if self.dir == "SUR":
@@ -87,17 +88,29 @@ class ZonaSimulada:
         self.mapa_zonal = mapa_zonal
         self.cola_vehiculos = queue.Queue()
         self.vehiculos = []
+        self.migraciones = asyncio.Queue()
+        self.loop = asyncio.get_event_loop()  # ⬅️ Aquí guardamos el loop principal
+
         self.semaforos = [
             Semaforo(400, 200, "horizontal"),
             Semaforo(400, 400, "horizontal"),
             Semaforo(300, 300, "vertical"),
             Semaforo(500, 300, "vertical"),
         ]
+
+        for _ in range(5):
+            v = VehiculoSimulado(
+                id_=str(uuid.uuid4()),
+                pos=[random.randint(300, 500), 500],  # ya cerca del borde para migrar
+                dir_="SUR",
+                vel=3
+            )
+            self.vehiculos.append(v)
+
         self.reportador = ReportadorZona(
             nombre_zona=self.nombre,
             obtener_estado_callback=self.estado_actual
         )
-
 
     async def recibir_callback(self, data):
         pos = [random.randint(300, 500), 0]
@@ -160,9 +173,18 @@ class ZonaSimulada:
     async def lanzar(self):
         print(f"[{self.nombre}] Escuchando en {self.cola_entrada}...")
         self.reportador.iniciar()
+
+        async def procesar_migraciones():
+            while True:
+                vehiculo = await self.migraciones.get()
+                destino = self.mapa_zonal.obtener_destino_migracion(vehiculo.pos, vehiculo.dir)
+                if destino:
+                    await self.migrar(vehiculo, destino)
+
+        asyncio.create_task(procesar_migraciones())
         await recibir_vehiculos(self.cola_entrada, self.recibir_callback)
 
     def estado_actual(self):
         total = len(self.vehiculos)
-        congestion = min(1.0, total / 20)  # Ejemplo: 20 vehículos = congestión máxima
+        congestion = min(1.0, total / 20)
         return total, congestion

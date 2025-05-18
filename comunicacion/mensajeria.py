@@ -9,6 +9,7 @@ async def conectar():
     return await aio_pika.connect_robust(RABBITMQ_URL)
 
 async def enviar_vehiculo(vehiculo_dict, destino):
+    #print(f"[RabbitMQ] Enviando vehículo a {destino}: {data}")
     connection = await conectar()
     async with connection:
         channel = await connection.channel()
