@@ -17,18 +17,26 @@ simulacion_distribuida/
 ├── servicios/
 │   ├── vehiculos.py
 │   ├── semaforos.py
+│   ├── reporte_estado.py
 │   ├── coordinador.py
 │   └── salud.py
 ├── comunicacion/
-│   └── rabbitmq_client.py
+│   └── mensajeria.py
+├── concurrency/
+│   └── tasks.py
 ├── interfaz/
 │   └── gui.py
+├── distribuition/
+│   └── rabbit_client.py
 ├── docker/
 │   └── Dockerfile
+├── simulation/
+│   └── simulator.py
 ├── utils.py
 └── zonas/
     ├── zona_norte.py
     ├── zona_sur.py
+    ├── mapa_zonal.py
     └── simulador_zona.py
 ```
 
