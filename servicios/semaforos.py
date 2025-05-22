@@ -1,8 +1,9 @@
 # servicios/semaforos.py
 
 import pygame
+from utils import COLOR_SEMAFORO
 
-COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
+#COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
 
 class Semaforo:
     def __init__(self, x, y, direccion):

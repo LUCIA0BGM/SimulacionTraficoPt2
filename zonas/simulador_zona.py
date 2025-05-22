@@ -5,15 +5,16 @@ import queue
 import random
 import uuid    
 from comunicacion.mensajeria import recibir_vehiculos, enviar_vehiculo
-from zonas.reporte_estado import ReportadorZona
+from servicios.reporte_estado import ReportadorZona
 from servicios.vehiculos import VehiculoSimulado, crear_vehiculo_desde_dict
 from servicios.semaforos import Semaforo
+from utils import ANCHO, ALTO, COLOR_FONDO, COLOR_CALLE, COLOR_VEHICULO, generar_spawn_aleatorio
 
-ANCHO, ALTO = 800, 600
-COLOR_FONDO = (30, 30, 30)
-COLOR_CALLE = (70, 70, 70)
-COLOR_VEHICULO = (0, 200, 255)
-COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
+#ANCHO, ALTO = 800, 600
+#COLOR_FONDO = (30, 30, 30)
+#COLOR_CALLE = (70, 70, 70)
+#COLOR_VEHICULO = (0, 200, 255)
+#COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
 
 class ZonaSimulada:
     def __init__(self, nombre, cola_entrada, mapa_zonal):
@@ -23,7 +24,10 @@ class ZonaSimulada:
         self.cola_vehiculos = queue.Queue()
         self.vehiculos = []
         self.migraciones = asyncio.Queue()
-
+        self.reportador = ReportadorZona(
+            nombre_zona=self.nombre,
+            obtener_estado_callback=self.estado_actual
+        )
         self.semaforos = [
             Semaforo(400, 200, "horizontal"),
             Semaforo(400, 400, "horizontal"),
@@ -31,35 +35,10 @@ class ZonaSimulada:
             Semaforo(500, 300, "vertical"),
         ]
 
-        for _ in range(5):
-            pos, dir_ = self.generar_spawn_aleatorio()
-            
-            v = VehiculoSimulado(
-                id_=str(uuid.uuid4()),
-                pos=pos,
-                dir_=dir_,
-                vel=3
-            )
-            self.vehiculos.append(v)
-
-        self.reportador = ReportadorZona(
-            nombre_zona=self.nombre,
-            obtener_estado_callback=self.estado_actual
-        )
-
-    def generar_spawn_aleatorio(self):
-        origen = random.choice(["NORTE", "SUR", "ESTE", "OESTE"])
-        if origen == "NORTE":
-            return [random.choice([290, 390, 490]), 0], "SUR"
-        elif origen == "SUR":
-            return [random.choice([290, 390, 490]), ALTO], "NORTE"
-        elif origen == "ESTE":
-            return [ANCHO, random.choice([190, 290, 390])], "OESTE"
-        elif origen == "OESTE":
-            return [0, random.choice([190, 290, 390])], "ESTE"
 
     async def recibir_callback(self, data):
-        v = crear_vehiculo_desde_dict(data)
+        v = crear_vehiculo_desde_dict(data, self)
+
         print(f"[{self.nombre}] Recibido {v.id} en {v.pos}")
         self.cola_vehiculos.put(v)
 
@@ -118,7 +97,7 @@ class ZonaSimulada:
         async def generar_vehiculos_periodicamente():
             while True:
                 await asyncio.sleep(5)
-                pos, dir_ = self.generar_spawn_aleatorio()
+                pos, dir_ = generar_spawn_aleatorio(self.nombre)
                 nuevo = VehiculoSimulado(
                     id_=str(uuid.uuid4()),
                     pos=pos,

@@ -48,13 +48,23 @@ class VehiculoSimulado:
 
 
 def crear_vehiculo_desde_dict(data, zona):
-    """
-    Crea un vehículo a partir de un diccionario recibido por RabbitMQ.
-    """
-    pos = [random.randint(300, 500), 0 if zona.lower().endswith("norte") else 580]
+    pos = data.get("posicion", [400, 0])
+    dir_ = data.get("direccion", "SUR")
+    vel = data.get("velocidad", 0.5) * 10
+
+    # 🔁 Corrige la posición si entra desde otra zona
+    if dir_ == "SUR":
+        pos[1] = 0  # entra por el norte
+    elif dir_ == "NORTE":
+        pos[1] = 580  # entra por el sur
+    elif dir_ == "ESTE":
+        pos[0] = 0  # entra por el oeste
+    elif dir_ == "OESTE":
+        pos[0] = 780  # entra por el este
+
     return VehiculoSimulado(
-        id_=data.get("id", str(uuid.uuid4())),
+        id_=data.get("id", "???"),
         pos=pos,
-        dir_="SUR" if zona.lower().endswith("norte") else "NORTE",
-        vel=data.get("velocidad", 0.5) * 10
+        dir_=dir_,
+        vel=vel
     )

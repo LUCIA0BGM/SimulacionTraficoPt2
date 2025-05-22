@@ -1,9 +1,8 @@
-# zonas/reporte_estado.py
+# servicios/estado.py
 
 import time
 import asyncio
 import httpx
-import threading
 
 class ReportadorZona:
     def __init__(self, nombre_zona, obtener_estado_callback, intervalo=5, url_coordinador="http://localhost:8000/estado"):

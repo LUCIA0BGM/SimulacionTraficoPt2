@@ -1,20 +1,36 @@
 # servicios/coordinador.py
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from typing import Dict
 import uvicorn
+from fastapi.responses import JSONResponse
+
 
 app = FastAPI(title="Coordinador Central de Tráfico")
 
 # Estado actual reportado por cada zona
-estado_zonas: Dict[str, dict] = {}
+estado_zonas = {}
 
 class EstadoZona(BaseModel):
     zona: str
     vehiculos: int
     congestion: float  # porcentaje entre 0.0 y 1.0
     timestamp: float
+
+@app.post("/reportar")
+async def reportar_estado(request: Request):
+    datos = await request.json()
+    zona = datos.get("zona")
+    vehiculos = datos.get("vehiculos", 0)
+    congestion = datos.get("congestion", 0.0)
+
+    if zona:
+        estado_zonas[zona] = {"vehiculos": vehiculos, "congestion": congestion}
+        print(f"[Coordinador] Estado actualizado para {zona}: {estado_zonas[zona]}")
+        return {"mensaje": "Estado recibido"}
+    else:
+        return JSONResponse(status_code=400, content={"error": "Zona no especificada"})
 
 @app.post("/estado")
 async def recibir_estado_zona(estado: EstadoZona):
@@ -35,5 +51,11 @@ async def obtener_estado_zona(nombre: str):
         raise HTTPException(status_code=404, detail="Zona no registrada")
     return estado_zonas[nombre]
 
-#if __name__ == "__main__":
-#    uvicorn.run("coordinador:app", host="0.0.0.0", port=8000, reload=True)
+@app.get("/health")
+async def health_check():
+    return {"estado": "ok", "descripcion": "El servicio coordinador está activo."}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
+
