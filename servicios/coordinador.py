@@ -35,5 +35,5 @@ async def obtener_estado_zona(nombre: str):
         raise HTTPException(status_code=404, detail="Zona no registrada")
     return estado_zonas[nombre]
 
-if __name__ == "__main__":
-    uvicorn.run("coordinador:app", host="0.0.0.0", port=8000, reload=True)
+#if __name__ == "__main__":
+#    uvicorn.run("coordinador:app", host="0.0.0.0", port=8000, reload=True)

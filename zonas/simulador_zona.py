@@ -6,83 +6,14 @@ import random
 import uuid    
 from comunicacion.mensajeria import recibir_vehiculos, enviar_vehiculo
 from zonas.reporte_estado import ReportadorZona
+from servicios.vehiculos import VehiculoSimulado, crear_vehiculo_desde_dict
+from servicios.semaforos import Semaforo
 
 ANCHO, ALTO = 800, 600
 COLOR_FONDO = (30, 30, 30)
 COLOR_CALLE = (70, 70, 70)
 COLOR_VEHICULO = (0, 200, 255)
 COLOR_SEMAFORO = {"rojo": (255, 0, 0), "verde": (0, 255, 0)}
-
-class Semaforo:
-    def __init__(self, x, y, direccion):
-        self.x = x
-        self.y = y
-        self.direccion = direccion
-        self.estado = "rojo"
-        self.tiempo = 0
-
-    def actualizar(self):
-        self.tiempo += 1
-        if self.tiempo >= 100:
-            self.estado = "verde" if self.estado == "rojo" else "rojo"
-            self.tiempo = 0
-
-    def dibujar(self, ventana):
-        color = COLOR_SEMAFORO[self.estado]
-        offset = 15
-        if self.direccion == "horizontal":
-            pygame.draw.circle(ventana, color, (self.x, self.y - offset), 8)
-        else:
-            pygame.draw.circle(ventana, color, (self.x - offset, self.y), 8)
-
-    def permite_pasar(self, vehiculo):
-        if self.direccion == "horizontal" and vehiculo.dir in ["ESTE", "OESTE"]:
-            return self.estado == "verde"
-        elif self.direccion == "vertical" and vehiculo.dir in ["NORTE", "SUR"]:
-            return self.estado == "verde"
-        return True
-
-class VehiculoSimulado:
-    def __init__(self, id_, pos, dir_, vel):
-        self.id = id_
-        self.pos = list(pos)
-        self.dir = dir_
-        self.vel = vel
-        self.migrando = False
-
-    def mover(self, semaforos, zona_actual):
-        if self.migrando:
-            return
-
-        for s in semaforos:
-            if not s.permite_pasar(self) and self._cerca_de(s):
-                return
-
-        self._avanzar()
-
-        destino = zona_actual.mapa_zonal.obtener_destino_migracion(self.pos, self.dir)
-        if destino:
-            print(f"[DEBUG] {self.id} detectado para migración hacia {destino} desde pos {self.pos}")
-            self.migrando = True
-            zona_actual.loop_principal.call_soon_threadsafe(zona_actual.migraciones.put_nowait, self)
-
-    def _avanzar(self):
-        if self.dir == "SUR":
-            self.pos[1] += self.vel
-        elif self.dir == "NORTE":
-            self.pos[1] -= self.vel
-        elif self.dir == "ESTE":
-            self.pos[0] += self.vel
-        elif self.dir == "OESTE":
-            self.pos[0] -= self.vel
-
-    def _cerca_de(self, semaforo):
-        return (
-            (self.dir == "SUR" and abs(self.pos[1] - semaforo.y) < 10 and abs(self.pos[0] - semaforo.x) < 20) or
-            (self.dir == "NORTE" and abs(self.pos[1] - semaforo.y) < 10 and abs(self.pos[0] - semaforo.x) < 20) or
-            (self.dir == "ESTE" and abs(self.pos[0] - semaforo.x) < 10 and abs(self.pos[1] - semaforo.y) < 20) or
-            (self.dir == "OESTE" and abs(self.pos[0] - semaforo.x) < 10 and abs(self.pos[1] - semaforo.y) < 20)
-        )
 
 class ZonaSimulada:
     def __init__(self, nombre, cola_entrada, mapa_zonal):
@@ -102,6 +33,7 @@ class ZonaSimulada:
 
         for _ in range(5):
             pos, dir_ = self.generar_spawn_aleatorio()
+            
             v = VehiculoSimulado(
                 id_=str(uuid.uuid4()),
                 pos=pos,
@@ -127,13 +59,7 @@ class ZonaSimulada:
             return [0, random.choice([190, 290, 390])], "ESTE"
 
     async def recibir_callback(self, data):
-        pos = data.get("posicion", [400, 0])
-        v = VehiculoSimulado(
-            id_=data.get("id", "???"),
-            pos=pos,
-            dir_=data.get("direccion", "SUR"),
-            vel=data.get("velocidad", 0.5) * 10
-        )
+        v = crear_vehiculo_desde_dict(data)
         print(f"[{self.nombre}] Recibido {v.id} en {v.pos}")
         self.cola_vehiculos.put(v)
 
