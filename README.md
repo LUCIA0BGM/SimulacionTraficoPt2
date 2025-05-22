@@ -1,5 +1,5 @@
 
-# Documentación Técnica - Simulación de Tráfico Distribuida
+# Documentación Técnica - Simulación de Tráfico Distribuida - Lucia Bermejo y Guillermo Salicrú
 
 ## 1. Resumen del Proyecto
 
